@@ -1,49 +1,36 @@
-const electron = require('electron');
-const path = require('path');
-const notifier = require('node-notifier');
-// const server = require('./server/server.js');
+import React from 'react';
+import { render } from 'react-dom';
+import App from './app/App';
+import reducers from './app/reducers';
+import { Provider } from 'react-redux';
+import { createStore, applyMiddleware } from 'redux';
+import thunk from 'redux-thunk';
+import createLogger from 'redux-logger'
+import { firebaseConfig } from './config';
+import firebase from "firebase"
 
-const { app, BrowserWindow, ipcMain} = electron;
 
-let mainWindow;
+const isDevelopment = process.env.NODE_ENV === 'development';
 
-app.on('ready', () =>  {
-  mainWindow = new BrowserWindow({
-    webPreferences: { backgroundThrottling: false },
-    show: false,
-    icon: path.join(__dirname,'public','images','favicon3.icns')
-  });
-  mainWindow.loadURL('http://localhost:3000');
-  mainWindow.maximize();
-  mainWindow.show();
-  mainWindow.on('closed', () =>  {
-    mainWindow=null;
-    app.quit();
-  });
-  
-  
-});
+if (window.firebase) {
+  firebase.initializeApp(firebaseConfig);
+}
 
-// app.on('quit', () => {
-//   server.close();
-// })
+const loggerMiddleware = createLogger();
+const reduxMiddlewares = isDevelopment ?
+  [thunk, loggerMiddleware]:
+  [thunk];
 
-ipcMain.on('playNotif', (event, name, message) => {
-  console.log('new message');
-  notifier.notify(
-    {
-      title: name,
-      message: message,
-      icon: path.join(__dirname, 'public', 'images', 'favicon3.png'), // Absolute path (doesn't work on balloons)
-      sound: true, // Only Notification Center or Windows Toasters
-      time: 1000,
-      timeout:1000,
-      expire:1000,
-      wait: false,
-      type: 'info'
-    },
-    function(err, response) {
-      // Response is response from notification
-    }
-  );
-});
+const store = createStore(
+  reducers,
+  applyMiddleware.apply(undefined, reduxMiddlewares)
+);
+
+// Dispatch initialization action here
+
+render(
+  <Provider store={ store }>
+    <App />
+  </Provider>,
+  document.querySelector('#react-container')
+);
